@@ -1,4 +1,6 @@
+// ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
+import 'package:shadprocess/src/modules/dashboards/screen/dashboard_screen.dart';
 import 'package:shadprocess/src/modules/home/screen/home_screen.dart';
 
 class NavigatorBottom extends StatefulWidget {
@@ -13,7 +15,7 @@ class _NavigatorBottomState extends State<NavigatorBottom> {
 
   final PageController _pageController = PageController();
 
-  final List<Widget> _pages = const [HomeScreen()];
+  final List<Widget> _pages = const [DashboardScreen(), HomeScreen()];
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
@@ -28,27 +30,32 @@ class _NavigatorBottomState extends State<NavigatorBottom> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F0F),
-
       body: PageView(
         controller: _pageController,
+        // ADICIONADO: Remove a capacidade de arrastar para o lado
+        physics: const NeverScrollableScrollPhysics(),
         onPageChanged: (index) {
           setState(() => _selectedIndex = index);
         },
         children: _pages,
       ),
-
       bottomNavigationBar: Container(
         height: 60,
-        decoration: BoxDecoration(border: const Border()),
+        decoration: const BoxDecoration(border: Border()),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildNavItem(
-                icon: Icons.home_rounded,
+                icon: Icons.dashboard,
                 index: 0,
-                label: 'Início',
+                label: 'Dashboards',
+              ),
+              _buildNavItem(
+                icon: Icons.calendar_today,
+                index: 1,
+                label: 'Calendario',
               ),
             ],
           ),

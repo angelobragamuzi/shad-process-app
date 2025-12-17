@@ -1,12 +1,19 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart';
-import 'package:shadprocess/src/core/database/models/case_dates_model.dart';
-import 'package:shadprocess/src/core/database/tables/case_documents_table.dart';
-import 'package:shadprocess/src/core/database/tables/case_movements_table.dart';
-import 'package:shadprocess/src/core/database/tables/legal_case_table.dart';
-import 'package:shadprocess/src/core/database/tables/legal_representative_table.dart';
-import 'package:shadprocess/src/core/database/tables/main_party_table.dart';
-import 'package:shadprocess/src/core/database/tables/opposing_parties_table.dart';
-part 'app_database.g.dart';
+import 'package:drift/native.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
+import 'tables/case_documents_table.dart';
+import 'tables/legal_case_table.dart';
+import 'tables/main_parties_table.dart';
+import 'tables/opposing_parties_table.dart';
+import 'tables/legal_representative_table.dart';
+import 'tables/case_dates_table.dart';
+import 'tables/case_movements_table.dart';
+
+part 'database.g.dart';
 
 @DriftDatabase(
   tables: [
@@ -15,8 +22,8 @@ part 'app_database.g.dart';
     OpposingParties,
     LegalRepresentatives,
     CaseDates,
-    CaseDocuments,
     CaseMovements,
+    CaseDocuments,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -24,4 +31,12 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   int get schemaVersion => 1;
+}
+
+LazyDatabase _openConnection() {
+  return LazyDatabase(() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(p.join(dir.path, 'db.sqlite'));
+    return NativeDatabase.createInBackground(file);
+  });
 }

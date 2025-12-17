@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:shadprocess/src/core/database/tables/legal_case_table.dart';
+import 'legal_case_table.dart';
 
 class CaseDates extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -12,6 +12,5 @@ class CaseDates extends Table {
   TextColumn get deadlineDescription => text()();
 
   DateTimeColumn get hearingDate => dateTime().nullable()();
-  ColumnBuilder<String> get hearingType =>
-      text().nullable(); // Conciliation, Judgment...
+  TextColumn get hearingType => text().nullable()();
 }

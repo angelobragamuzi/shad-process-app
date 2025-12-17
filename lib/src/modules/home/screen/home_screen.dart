@@ -1,8 +1,9 @@
 // ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import 'package:shadprocess/src/core/repository/case_repository.dart';
 import 'package:shadprocess/src/modules/home/widgets/calendar_grid.dart';
-import 'package:shadprocess/src/modules/home/widgets/create-process/create_process_button.dart';
+import 'package:shadprocess/src/modules/home/widgets/create_process_button.dart';
 import 'package:shadprocess/src/modules/home/widgets/process_detail_card.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -13,7 +14,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final caseRepository = GetIt.I<CaseRepository>();
   late final ValueNotifier<DateTime> _selectedDateNotifier;
+
+  final Color _bgScaffold = const Color(0xFF0F1113);
+  final Color _accentBlue = const Color(0xFF00D1FF);
 
   @override
   void initState() {
@@ -21,65 +26,109 @@ class _HomeScreenState extends State<HomeScreen> {
     _selectedDateNotifier = ValueNotifier(DateTime.now());
   }
 
-  @override
-  void dispose() {
-    _selectedDateNotifier.dispose();
-    super.dispose();
-  }
-
-  Future<void> _refreshData() async {
-    setState(() {});
-    await Future.delayed(const Duration(milliseconds: 500));
+  Future<void> _onRefresh() async {
+    // Ao atualizar, resetamos a data para "hoje" ou apenas forçamos o rebuild
+    setState(() {
+      // Força a reconstrução do FutureBuilder e widgets dependentes
+    });
+    await Future.delayed(const Duration(milliseconds: 600));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 29, 29, 29),
+      backgroundColor: _bgScaffold,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F0F0F),
+        backgroundColor: _bgScaffold,
         elevation: 0,
-        title: ShaderMask(
-          blendMode: BlendMode.srcIn,
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [
-              Color.fromARGB(255, 4, 177, 230),
-              Color.fromARGB(255, 49, 161, 236),
-              Color.fromARGB(255, 163, 210, 255),
-            ],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ).createShader(bounds),
-          child: const Text(
-            'Acompanhar Processos',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: 1.3,
-            ),
+        toolbarHeight: 60,
+        title: const Text(
+          'Acompanhar e Criar Processos',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
           ),
         ),
       ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _refreshData,
-          color: const Color.fromARGB(255, 4, 177, 230),
-          backgroundColor: const Color(0xFF0F0F0F),
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CreateProcessButton(),
-                const SizedBox(height: 20),
-                CalendarGrid(dateNotifier: _selectedDateNotifier),
-                SizedBox(height: 20),
-                ProcessDetailCard(),
-              ],
+      // O RefreshIndicator agora engloba o CustomScrollView para atualizar TUDO
+      body: RefreshIndicator(
+        color: _accentBlue,
+        backgroundColor: const Color(0xFF1A1D21),
+        onRefresh: _onRefresh,
+        child: CustomScrollView(
+          // AlwaysScrollable permite o pull-to-refresh mesmo sem conteúdo longo
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // Parte Superior: Botão e Calendário
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    const CreateProcessButton(),
+                    const SizedBox(height: 16),
+                    CalendarGrid(dateNotifier: _selectedDateNotifier),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
             ),
-          ),
+
+            // Parte Inferior: Lista de Processos
+            ValueListenableBuilder<DateTime>(
+              valueListenable: _selectedDateNotifier,
+              builder: (context, selectedDate, _) {
+                return FutureBuilder<List<CaseListItem>>(
+                  future: caseRepository.getCasesByDate(selectedDate),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF00D1FF),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final cases = snapshot.data ?? [];
+
+                    if (cases.isEmpty) {
+                      return SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: Text(
+                            'Nenhum processo para este dia.',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.4),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    return SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final item = cases[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: ProcessDetailCard(
+                              process: item.legalCase,
+                              mainPartyName: item.mainPartyName,
+                            ),
+                          );
+                        }, childCount: cases.length),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
