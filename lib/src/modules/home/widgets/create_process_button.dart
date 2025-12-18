@@ -1,7 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:shadprocess/src/modules/process/widgets/page-view/process_page_view_screen.dart';
 
 class CreateProcessButton extends StatelessWidget {

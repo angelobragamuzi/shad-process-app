@@ -67,7 +67,7 @@ class CaseRepository {
         'status': legalCase.status,
         'client_name': mainParty?.name ?? 'Not informed',
         'opposing_party': opposingParty?.name ?? 'Not informed',
-        'next_deadline': dates?.nextDeadline?.toIso8601String(),
+        'next_deadline': dates?.nextDeadline.toIso8601String(),
         'deadline_description': dates?.deadlineDescription ?? 'N/A',
         'court': legalCase.court,
         'priority': legalCase.priority,

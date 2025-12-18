@@ -3,15 +3,15 @@ import 'package:shadprocess/src/core/database/database.dart';
 import 'package:shadprocess/src/core/repository/case_repository.dart';
 import 'package:shadprocess/src/core/services/agent/gemini_service.dart';
 
-class ReportsPage extends StatefulWidget {
+class ChatbotPage extends StatefulWidget {
   final AppDatabase db;
-  const ReportsPage({super.key, required this.db});
+  const ChatbotPage({super.key, required this.db});
 
   @override
-  State<ReportsPage> createState() => _ReportsPageState();
+  State<ChatbotPage> createState() => _ChatbotPageState();
 }
 
-class _ReportsPageState extends State<ReportsPage> {
+class _ChatbotPageState extends State<ChatbotPage> {
   final List<Map<String, String>> _messages = [];
   bool _isTyping = false;
   final TextEditingController _chatController = TextEditingController();
@@ -49,7 +49,6 @@ class _ReportsPageState extends State<ReportsPage> {
         message: text,
         detailedContext: contextData,
         metrics: metrics,
-        history: _messages.sublist(0, _messages.length - 1),
       );
 
       setState(() {

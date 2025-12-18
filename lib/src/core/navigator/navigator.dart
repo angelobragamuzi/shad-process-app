@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:shadprocess/src/core/database/database.dart';
 import 'package:shadprocess/src/modules/dashboards/screen/dashboard_screen.dart';
 import 'package:shadprocess/src/modules/home/screen/home_screen.dart';
-import 'package:shadprocess/src/modules/reports/screen/reports_page.dart';
+import 'package:shadprocess/src/modules/chatbot/screen/chatbot_page.dart';
+import 'package:shadprocess/src/modules/reports/screens/reports_page.dart';
 
 class NavigatorBottom extends StatefulWidget {
-  final AppDatabase db; // Receba o banco aqui para repassar às páginas
+  final AppDatabase db;
   const NavigatorBottom({super.key, required this.db});
 
   @override
@@ -17,11 +18,11 @@ class _NavigatorBottomState extends State<NavigatorBottom> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
 
-  // Removido o 'const' e transformado em getter para garantir acesso ao widget.db
   List<Widget> get _pages => [
     const DashboardScreen(),
     const HomeScreen(),
-    ReportsPage(db: widget.db), // Injeção do banco corrigida
+    ChatbotPage(db: widget.db),
+    ReportsPage(db: widget.db),
   ];
 
   void _onItemTapped(int index) {
@@ -37,41 +38,48 @@ class _NavigatorBottomState extends State<NavigatorBottom> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F0F),
+      resizeToAvoidBottomInset: false,
       body: PageView(
         controller: _pageController,
         physics: const NeverScrollableScrollPhysics(),
         onPageChanged: (index) {
           setState(() => _selectedIndex = index);
         },
-        children: _pages, // Usa a lista dinâmica
+        children: _pages,
       ),
       bottomNavigationBar: Container(
-        height: 70, // Ajustado levemente para caber labels e ícones sem apertar
+        height: 75,
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: Colors.white10, width: 0.5)),
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                icon: Icons.dashboard_rounded,
-                index: 0,
-                label: 'Dashboards',
-              ),
-              _buildNavItem(
-                icon: Icons.calendar_month_rounded,
-                index: 1,
-                label: 'Calendário',
-              ),
-              _buildNavItem(
-                icon: Icons
-                    .auto_awesome_rounded, // Ícone mais "IA" para o ShadBot
-                index: 2,
-                label: 'ShadBot',
-              ),
-            ],
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(
+                  icon: Icons.dashboard_rounded,
+                  index: 0,
+                  label: 'Dashboards',
+                ),
+                _buildNavItem(
+                  icon: Icons.calendar_month_rounded,
+                  index: 1,
+                  label: 'Calendário',
+                ),
+                _buildNavItem(
+                  icon: Icons.auto_awesome_rounded,
+                  index: 2,
+                  label: 'ShadBot',
+                ),
+                _buildNavItem(
+                  icon: Icons.description_rounded,
+                  index: 3,
+                  label: 'Relatórios',
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -85,36 +93,45 @@ class _NavigatorBottomState extends State<NavigatorBottom> {
   }) {
     final bool isSelected = _selectedIndex == index;
 
-    return InkWell(
-      onTap: () => _onItemTapped(index),
-      borderRadius: BorderRadius.circular(20),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.white.withOpacity(0.05)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? const Color(0xFF00D1FF) : Colors.white38,
-              size: 24,
+    return Expanded(
+      child: InkWell(
+        onTap: () => _onItemTapped(index),
+        borderRadius: BorderRadius.circular(20),
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(15),
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.white38,
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? const Color(0xFF00D1FF) : Colors.white38,
+                  size: 22,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : Colors.white38,
+                    fontSize: 10,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

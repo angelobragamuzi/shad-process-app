@@ -11,80 +11,97 @@ class GeminiService {
     required String message,
     required List<Map<String, dynamic>> detailedContext,
     required DashboardMetrics metrics,
-    List<Map<String, String>> history = const [],
+    // Histórico removido para poupar memória/tokens em relatórios
   }) async {
     const modelName = "gemini-2.5-flash-preview-09-2025";
+
+    if (apiKey.isEmpty) {
+      print("GEMINI_API_KEY está vazia");
+      return "Chave da API não configurada.";
+    }
+
     final url = Uri.parse(
       "https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent?key=$apiKey",
     );
 
+    // Prompt de sistema otimizado e sem histórico
     final systemInstruction =
         """
-Você é o ShadProcess, assistente jurídico técnico. Use o JSON abaixo como única fonte de verdade.
-ESTATÍSTICAS: Total: ${metrics.total} | Ativos: ${metrics.active} | Alta Prioridade: ${metrics.highPriorityCount}
-CONTEXTO: ${jsonEncode(detailedContext)}
+VOCÊ É O SHADPROCESS.
+Assistente jurídico operacional.
 
-DIRETRIZES:
-1. Idioma: Português (Brasil). Tom: Profissional e extremamente direto.
-2. Formatação: Use **negrito** para números de processo e tabelas Markdown para listas.
-3. Se o dado não estiver no JSON, diga: "Informação não localizada na base de dados. Forneça mais detalhes."
-4. Não invente prazos ou movimentações.
+Use APENAS os dados fornecidos no JSON. Seja extremamente direto.
+Não coloque asteriscos (**), hashtags (#) ou notas.
+Datas no formato DD/MM/AAAA.
+
+ESTATÍSTICAS ATUAIS:
+Total: ${metrics.total} | Ativos: ${metrics.active} | Arquivados: ${metrics.archived}
+
+CONTEXTO DOS PROCESSOS:
+${jsonEncode(detailedContext)}
 """;
-
-    final historyParts = history
-        .map(
-          (msg) => {
-            "role": msg['role'] == 'user' ? 'user' : 'model',
-            "parts": [
-              {"text": msg['text']},
-            ],
-          },
-        )
-        .toList();
 
     final body = {
       "contents": [
-        ...historyParts,
         {
           "role": "user",
           "parts": [
-            {"text": "$systemInstruction\n\nPergunta: $message"},
+            {"text": "$systemInstruction\n\nPergunta do usuário: $message"},
           ],
         },
       ],
       "generationConfig": {
-        "temperature": 0.1,
-        "topP": 0.95,
-        "maxOutputTokens": 800,
+        "temperature": 0.0,
+        "topP": 0.1, // Reduzido para maior precisão factual
+        "maxOutputTokens": 4048,
       },
     };
 
-    return _sendRequestWithRetry(url, body);
+    final encodedBody = jsonEncode(body);
+    print("BODY SIZE: ${encodedBody.length} bytes");
+
+    return _sendRequestWithRetry(url, encodedBody);
   }
 
-  Future<String> _sendRequestWithRetry(
-    Uri url,
-    Map<String, dynamic> body,
-  ) async {
+  Future<String> _sendRequestWithRetry(Uri url, String encodedBody) async {
     const maxRetries = 3;
-    for (int i = 0; i < maxRetries; i++) {
+
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         final response = await http.post(
           url,
           headers: {"Content-Type": "application/json"},
-          body: jsonEncode(body),
+          body: encodedBody,
         );
 
         if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          return data["candidates"][0]["content"]["parts"][0]["text"];
+          final decoded = jsonDecode(response.body);
+          final candidates = decoded["candidates"];
+
+          if (candidates == null || candidates.isEmpty) return "Sem resposta.";
+
+          final candidate = candidates[0];
+
+          if (candidate["finishReason"] == "MAX_TOKENS") {
+            return "Relatório muito longo. Tente filtrar por um período ou tipo específico.";
+          }
+
+          final text = candidate["content"]?["parts"]?[0]?["text"];
+          return text?.toString().trim() ?? "Erro na resposta.";
         }
-        if (response.statusCode != 429 && response.statusCode < 500) break;
-        await Future.delayed(Duration(seconds: i + 1));
+
+        if (response.statusCode == 429) {
+          // Rate limit
+          await Future.delayed(Duration(seconds: attempt * 2));
+          continue;
+        }
+
+        return "Erro técnico (Status: ${response.statusCode})";
       } catch (e) {
-        if (i == maxRetries - 1) return "Erro de conexão com o ShadProcess.";
+        if (attempt == maxRetries) return "Falha de conexão persistente.";
+        await Future.delayed(const Duration(seconds: 1));
       }
     }
-    return "O assistente está indisponível no momento.";
+    return "O assistente está temporariamente indisponível.";
   }
 }
