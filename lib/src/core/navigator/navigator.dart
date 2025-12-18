@@ -1,10 +1,13 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
+import 'package:shadprocess/src/core/database/database.dart';
 import 'package:shadprocess/src/modules/dashboards/screen/dashboard_screen.dart';
 import 'package:shadprocess/src/modules/home/screen/home_screen.dart';
+import 'package:shadprocess/src/modules/reports/screen/reports_page.dart';
 
 class NavigatorBottom extends StatefulWidget {
-  const NavigatorBottom({super.key});
+  final AppDatabase db; // Receba o banco aqui para repassar às páginas
+  const NavigatorBottom({super.key, required this.db});
 
   @override
   State<NavigatorBottom> createState() => _NavigatorBottomState();
@@ -12,10 +15,14 @@ class NavigatorBottom extends StatefulWidget {
 
 class _NavigatorBottomState extends State<NavigatorBottom> {
   int _selectedIndex = 0;
-
   final PageController _pageController = PageController();
 
-  final List<Widget> _pages = const [DashboardScreen(), HomeScreen()];
+  // Removido o 'const' e transformado em getter para garantir acesso ao widget.db
+  List<Widget> get _pages => [
+    const DashboardScreen(),
+    const HomeScreen(),
+    ReportsPage(db: widget.db), // Injeção do banco corrigida
+  ];
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
@@ -32,30 +39,37 @@ class _NavigatorBottomState extends State<NavigatorBottom> {
       backgroundColor: const Color(0xFF0F0F0F),
       body: PageView(
         controller: _pageController,
-        // ADICIONADO: Remove a capacidade de arrastar para o lado
         physics: const NeverScrollableScrollPhysics(),
         onPageChanged: (index) {
           setState(() => _selectedIndex = index);
         },
-        children: _pages,
+        children: _pages, // Usa a lista dinâmica
       ),
       bottomNavigationBar: Container(
-        height: 60,
-        decoration: const BoxDecoration(border: Border()),
+        height: 70, // Ajustado levemente para caber labels e ícones sem apertar
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Colors.white10, width: 0.5)),
+        ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(
-                icon: Icons.dashboard,
+                icon: Icons.dashboard_rounded,
                 index: 0,
                 label: 'Dashboards',
               ),
               _buildNavItem(
-                icon: Icons.calendar_today,
+                icon: Icons.calendar_month_rounded,
                 index: 1,
-                label: 'Calendario',
+                label: 'Calendário',
+              ),
+              _buildNavItem(
+                icon: Icons
+                    .auto_awesome_rounded, // Ícone mais "IA" para o ShadBot
+                index: 2,
+                label: 'ShadBot',
               ),
             ],
           ),
@@ -72,36 +86,33 @@ class _NavigatorBottomState extends State<NavigatorBottom> {
     final bool isSelected = _selectedIndex == index;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(40),
       onTap: () => _onItemTapped(index),
+      borderRadius: BorderRadius.circular(20),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white10 : Colors.transparent,
-          borderRadius: BorderRadius.circular(30),
+          color: isSelected
+              ? Colors.white.withOpacity(0.05)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedScale(
-              scale: isSelected ? 1.05 : 1.0,
-              duration: const Duration(milliseconds: 200),
-              child: Icon(
-                icon,
-                color: isSelected ? Colors.white : Colors.white54,
-                size: 22,
-              ),
+            Icon(
+              icon,
+              color: isSelected ? const Color(0xFF00D1FF) : Colors.white38,
+              size: 24,
             ),
-            const SizedBox(height: 2),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 200),
+            const SizedBox(height: 4),
+            Text(
+              label,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.white54,
-                fontSize: isSelected ? 12 : 11,
+                color: isSelected ? Colors.white : Colors.white38,
+                fontSize: 10,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
-              child: Text(label),
             ),
           ],
         ),

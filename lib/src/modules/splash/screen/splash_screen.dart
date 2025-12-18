@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:shadprocess/src/core/database/database.dart';
 import 'package:shadprocess/src/core/navigator/navigator.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -15,6 +16,9 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+
+  // 1. Instancie o banco de dados
+  final AppDatabase _db = AppDatabase();
 
   @override
   void initState() {
@@ -40,7 +44,10 @@ class _SplashScreenState extends State<SplashScreen>
     Future.delayed(const Duration(seconds: 3), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const NavigatorBottom()),
+        MaterialPageRoute(
+          // 2. REMOVA o 'const' e passe a instância '_db'
+          builder: (_) => NavigatorBottom(db: _db),
+        ),
       );
     });
   }
@@ -48,6 +55,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _controller.dispose();
+    // _db.close(); // Opcional: feche o banco apenas se o app for encerrado
     super.dispose();
   }
 

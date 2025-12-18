@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:shadprocess/src/dependencies.dart';
 import 'package:shadprocess/src/modules/splash/screen/splash_screen.dart';
@@ -6,10 +7,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   await setupDependencies();
   await Future.delayed(const Duration(milliseconds: 200));
   await SharedPreferences.getInstance();
-  // await dotenv.load(fileName: ".env");
+
   runApp(const ShadFinancyInitializer());
 }
 

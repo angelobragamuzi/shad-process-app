@@ -161,11 +161,12 @@ class _CaseFormStepOneState extends State<CaseFormStepOne> {
               children: [
                 Expanded(
                   child: ListView(
-                    physics: const NeverScrollableScrollPhysics(),
                     children: [
                       _section('Processo', [
                         TextFormField(
                           controller: _caseNumberCtrl,
+                          // Adicione esta linha:
+                          keyboardType: TextInputType.number,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,

@@ -159,7 +159,6 @@ class _CaseFormStepTwoState extends State<CaseFormStepTwo> {
               children: [
                 Expanded(
                   child: ListView(
-                    physics: const NeverScrollableScrollPhysics(),
                     children: [
                       _section('Prazos do Processo', [
                         Row(

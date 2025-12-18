@@ -35,15 +35,53 @@ class CaseRepository {
 
   CaseRepository(this.db);
 
+  /// ADICIONADO: Método para fornecer contexto detalhado ao Gemini
+  Future<List<Map<String, dynamic>>> getDetailedCasesContext() async {
+    final query = db.select(db.legalCases).join([
+      leftOuterJoin(
+        db.mainParties,
+        db.mainParties.legalCaseId.equalsExp(db.legalCases.id),
+      ),
+      leftOuterJoin(
+        db.opposingParties,
+        db.opposingParties.legalCaseId.equalsExp(db.legalCases.id),
+      ),
+      leftOuterJoin(
+        db.caseDates,
+        db.caseDates.legalCaseId.equalsExp(db.legalCases.id),
+      ),
+    ]);
+
+    final rows = await query.get();
+
+    return rows.map((row) {
+      final legalCase = row.readTable(db.legalCases);
+      final mainParty = row.readTableOrNull(db.mainParties);
+      final opposingParty = row.readTableOrNull(db.opposingParties);
+      final dates = row.readTableOrNull(db.caseDates);
+
+      return {
+        'case_number': legalCase.caseNumber,
+        'type': legalCase.caseType,
+        'area': legalCase.area,
+        'status': legalCase.status,
+        'client_name': mainParty?.name ?? 'Not informed',
+        'opposing_party': opposingParty?.name ?? 'Not informed',
+        'next_deadline': dates?.nextDeadline?.toIso8601String(),
+        'deadline_description': dates?.deadlineDescription ?? 'N/A',
+        'court': legalCase.court,
+        'priority': legalCase.priority,
+      };
+    }).toList();
+  }
+
   Future<List<LegalCase>> getAvailableCases() async {
     return await db.select(db.legalCases).get();
   }
 
   Future<DashboardMetrics> getDashboardMetrics() async {
-    // 1. Busca todos os casos para contagem geral
     final allCases = await db.select(db.legalCases).get();
 
-    // Contadores
     int active = 0;
     int archived = 0;
     int finished = 0;
@@ -51,11 +89,9 @@ class CaseRepository {
     final Map<String, int> typeMap = {};
 
     for (var c in allCases) {
-      // Normaliza strings para comparação segura
       final status = c.status.toLowerCase();
       final priority = c.priority.toLowerCase();
 
-      // Contagem de Status
       if (status == 'ativo' || status == 'em andamento')
         active++;
       else if (status == 'arquivado')
@@ -63,19 +99,15 @@ class CaseRepository {
       else if (status == 'encerrado' || status == 'concluído')
         finished++;
 
-      // Contagem de Prioridade
       if (priority.contains('alta') || priority.contains('urgente'))
         highPriority++;
 
-      // Agrupamento por Tipo
       typeMap[c.caseType] = (typeMap[c.caseType] ?? 0) + 1;
     }
 
-    // 2. Busca Prazos Próximos (Próximos 7 dias)
     final now = DateTime.now();
     final nextWeek = now.add(const Duration(days: 7));
 
-    // Precisamos fazer um Join para pegar o nome da parte E a data do prazo
     final queryDeadlines =
         db.select(db.legalCases).join([
             innerJoin(
@@ -89,7 +121,7 @@ class CaseRepository {
           ])
           ..where(
             db.caseDates.nextDeadline.isBetweenValues(
-              now.subtract(const Duration(days: 1)), // Inclui hoje
+              now.subtract(const Duration(days: 1)),
               nextWeek,
             ),
           )
