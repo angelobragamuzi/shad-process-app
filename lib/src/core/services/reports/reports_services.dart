@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../agent/gemini_service.dart';
-import '../../repository/case_repository.dart';
+import '../../repository/case/case_repository.dart';
 
 class ReportService {
   final GeminiService _gemini = GeminiService();

@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:get_it/get_it.dart';
-import 'package:shadprocess/src/core/repository/case_repository.dart';
+import 'package:shadprocess/src/core/repository/case/case_repository.dart';
 import 'package:shadprocess/src/core/database/database.dart';
 
 class CalendarGrid extends StatelessWidget {

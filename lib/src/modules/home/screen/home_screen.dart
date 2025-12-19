@@ -1,7 +1,7 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
-import 'package:shadprocess/src/core/repository/case_repository.dart';
+import 'package:shadprocess/src/core/repository/case/case_repository.dart';
 import 'package:shadprocess/src/modules/home/widgets/calendar_grid.dart';
 import 'package:shadprocess/src/modules/home/widgets/create_process_button.dart';
 import 'package:shadprocess/src/modules/home/widgets/process_detail_card.dart';

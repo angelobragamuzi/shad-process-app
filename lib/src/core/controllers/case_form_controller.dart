@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:shadprocess/src/core/repository/case_repository.dart';
+import 'package:shadprocess/src/core/repository/case/case_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CaseFormController {

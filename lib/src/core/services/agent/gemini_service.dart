@@ -2,7 +2,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../../repository/case_repository.dart';
+import '../../repository/case/case_repository.dart';
 
 class GeminiService {
   final String apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
@@ -11,7 +11,6 @@ class GeminiService {
     required String message,
     required List<Map<String, dynamic>> detailedContext,
     required DashboardMetrics metrics,
-    // Histórico removido para poupar memória/tokens em relatórios
   }) async {
     const modelName = "gemini-2.5-flash-preview-09-2025";
 
@@ -24,7 +23,6 @@ class GeminiService {
       "https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent?key=$apiKey",
     );
 
-    // Prompt de sistema otimizado e sem histórico
     final systemInstruction =
         """
 VOCÊ É O SHADPROCESS.
@@ -52,7 +50,7 @@ ${jsonEncode(detailedContext)}
       ],
       "generationConfig": {
         "temperature": 0.0,
-        "topP": 0.1, // Reduzido para maior precisão factual
+        "topP": 0.1,
         "maxOutputTokens": 4048,
       },
     };
@@ -91,7 +89,6 @@ ${jsonEncode(detailedContext)}
         }
 
         if (response.statusCode == 429) {
-          // Rate limit
           await Future.delayed(Duration(seconds: attempt * 2));
           continue;
         }

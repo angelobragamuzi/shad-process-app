@@ -1,7 +1,7 @@
 // ignore_for_file: curly_braces_in_flow_control_structures
 
 import 'package:drift/drift.dart';
-import '../database/database.dart';
+import '../../database/database.dart';
 
 class DashboardMetrics {
   final int total;

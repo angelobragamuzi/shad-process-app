@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shadprocess/src/core/database/database.dart';
-import 'package:shadprocess/src/core/repository/case_repository.dart';
+import 'package:shadprocess/src/core/repository/case/case_repository.dart';
 import 'package:shadprocess/src/core/services/agent/gemini_service.dart';
 
 class ChatbotPage extends StatefulWidget {

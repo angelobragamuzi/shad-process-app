@@ -1,9 +1,12 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, unnecessary_to_list_in_spreads
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
-import 'package:shadprocess/src/core/database/database.dart';
-import 'package:shadprocess/src/core/repository/case_repository.dart';
+
+import 'package:shadprocess/src/core/repository/case/case_repository.dart';
+import 'package:shadprocess/src/core/repository/dashboard/dashboard_config_repository.dart';
+import 'package:shadprocess/src/modules/dashboards/screen/dashboard_customization_screen.dart';
+import 'package:shadprocess/src/modules/dashboards/widgets/dashboard_widget_config.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -14,6 +17,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final caseRepository = GetIt.I<CaseRepository>();
+  final dashboardConfigRepo = GetIt.I<DashboardConfigRepository>();
 
   final Color _accentBlue = const Color(0xFF00D1FF);
   final Color _bgScaffold = const Color(0xFF0F1113);
@@ -21,11 +25,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final Color _textSub = const Color(0xFF8A8F98);
   final Color _borderColor = Colors.white.withOpacity(0.08);
 
-  // Função para atualizar os dados
   Future<void> _onRefresh() async {
-    setState(() {
-      // Força o rebuild do FutureBuilder disparando o repositório novamente
-    });
+    setState(() {});
     await Future.delayed(const Duration(milliseconds: 600));
   }
 
@@ -46,14 +47,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: Colors.white,
           ),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Personalizar dashboard',
+            icon: const Icon(Icons.tune_rounded, color: Colors.white, size: 22),
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const DashboardCustomizationScreen(),
+                ),
+              );
+
+              // força rebuild ao voltar da personalização
+              setState(() {});
+            },
+          ),
+        ],
       ),
       body: RefreshIndicator(
         color: _accentBlue,
         backgroundColor: _bgCard,
         onRefresh: _onRefresh,
-        child: FutureBuilder<DashboardMetrics>(
-          future: caseRepository.getDashboardMetrics(),
-          builder: (context, snapshot) {
+        child: FutureBuilder(
+          future: Future.wait([
+            caseRepository.getDashboardMetrics(),
+            dashboardConfigRepo.getConfig(),
+          ]),
+          builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Center(
                 child: CircularProgressIndicator(
@@ -62,6 +82,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               );
             }
+
             if (snapshot.hasError || !snapshot.hasData) {
               return const Center(
                 child: Text(
@@ -71,109 +92,136 @@ class _DashboardScreenState extends State<DashboardScreen> {
               );
             }
 
-            final data = snapshot.data!;
+            final DashboardMetrics data = snapshot.data![0] as DashboardMetrics;
+
+            final List<DashboardWidgetConfig> config =
+                (snapshot.data![1] as List<DashboardWidgetConfig>)
+                    .where((DashboardWidgetConfig c) => c.enabled)
+                    .toList()
+                  ..sort((a, b) => a.order.compareTo(b.order));
 
             return CustomScrollView(
-              // Physics essencial para o refresh funcionar mesmo sem overflow
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
                   sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      if (data.highPriorityCount > 0) ...[
-                        _buildAlertBanner(data.highPriorityCount),
-                        const SizedBox(height: 8),
-                      ],
+                    delegate: SliverChildListDelegate(
+                      config.map((item) {
+                        switch (item.type) {
+                          case DashboardWidgetType.alertBanner:
+                            return data.highPriorityCount > 0
+                                ? Column(
+                                    children: [
+                                      _buildAlertBanner(data.highPriorityCount),
+                                      const SizedBox(height: 8),
+                                    ],
+                                  )
+                                : const SizedBox();
 
-                      // 1. GRID DE STATUS
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildStatCard(
-                              "Total",
-                              data.total,
-                              Colors.white,
-                              Icons.account_balance_wallet_outlined,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _buildStatCard(
-                              "Em Curso",
-                              data.active,
-                              _accentBlue,
-                              Icons.bolt_rounded,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildStatCard(
-                              "Concluídos",
-                              data.finished,
-                              const Color(0xFF4ADE80),
-                              Icons.check_circle_outline_rounded,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _buildStatCard(
-                              "Arquivados",
-                              data.archived,
-                              const Color(0xFFFBBF24),
-                              Icons.inventory_2_outlined,
-                            ),
-                          ),
-                        ],
-                      ),
+                          case DashboardWidgetType.statsOverview:
+                            return Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildStatCard(
+                                        "Total",
+                                        data.total,
+                                        Colors.white,
+                                        Icons.account_balance_wallet_outlined,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _buildStatCard(
+                                        "Em Curso",
+                                        data.active,
+                                        _accentBlue,
+                                        Icons.bolt_rounded,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildStatCard(
+                                        "Concluídos",
+                                        data.finished,
+                                        const Color(0xFF4ADE80),
+                                        Icons.check_circle_outline_rounded,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _buildStatCard(
+                                        "Arquivados",
+                                        data.archived,
+                                        const Color(0xFFFBBF24),
+                                        Icons.inventory_2_outlined,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                            );
 
-                      const SizedBox(height: 12),
+                          case DashboardWidgetType.workload:
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionTitle("Carga de Prazos"),
+                                const SizedBox(height: 6),
+                                _buildWeeklyWorkload(data.upcomingDeadlines),
+                                const SizedBox(height: 12),
+                              ],
+                            );
 
-                      // 2. CARGA SEMANAL
-                      _buildSectionTitle("Carga de Prazos"),
-                      const SizedBox(height: 6),
-                      _buildWeeklyWorkload(data.upcomingDeadlines),
+                          case DashboardWidgetType.typeDistribution:
+                            return Row(
+                              children: [
+                                Expanded(
+                                  child: _buildMetricPanel(
+                                    title: "Áreas",
+                                    child: _buildTypeDistribution(data.byType),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _buildMetricPanel(
+                                    title: "Tribunais",
+                                    child: _buildCourtDistribution(
+                                      data.upcomingDeadlines,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
 
-                      const SizedBox(height: 12),
+                          case DashboardWidgetType.upcomingDeadlines:
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 12),
+                                _buildSectionTitle("Próximos Compromissos"),
+                                const SizedBox(height: 6),
+                                if (data.upcomingDeadlines.isEmpty)
+                                  _emptyLabel()
+                                else
+                                  ...data.upcomingDeadlines
+                                      .take(2)
+                                      .map(_buildDeadlineItem),
+                              ],
+                            );
 
-                      // 3. MÉTRICAS LADO A LADO
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildMetricPanel(
-                              title: "Áreas",
-                              child: _buildTypeDistribution(data.byType),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _buildMetricPanel(
-                              title: "Tribunais",
-                              child: _buildCourtDistribution(
-                                data.upcomingDeadlines,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // 4. PRÓXIMOS COMPROMISSOS
-                      _buildSectionTitle("Próximos Compromissos"),
-                      const SizedBox(height: 6),
-                      if (data.upcomingDeadlines.isEmpty)
-                        _emptyLabel()
-                      else
-                        ...data.upcomingDeadlines
-                            .take(2)
-                            .map((item) => _buildDeadlineItem(item))
-                            .toList(),
-                    ]),
+                          case DashboardWidgetType.courtDistribution:
+                            return const SizedBox(); // já incluso acima
+                        }
+                      }).toList(),
+                    ),
                   ),
                 ),
               ],
@@ -184,20 +232,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ... (Mantenha todos os seus métodos Widgets auxiliares _build exatamente como estão abaixo)
-  // [Abaixo seguem os métodos _buildSectionTitle, _buildStatCard, etc., sem alterações]
+  // ======================= WIDGETS =======================
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title.toUpperCase(),
-      style: TextStyle(
-        color: _textSub,
-        fontSize: 11,
-        fontWeight: FontWeight.bold,
-        letterSpacing: 1.5,
-      ),
-    );
-  }
+  Widget _buildSectionTitle(String title) => Text(
+    title.toUpperCase(),
+    style: TextStyle(
+      color: _textSub,
+      fontSize: 11,
+      fontWeight: FontWeight.bold,
+      letterSpacing: 1.5,
+    ),
+  );
 
   Widget _buildStatCard(String title, int value, Color color, IconData icon) {
     return Container(
@@ -277,7 +322,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final count = cases
               .where((c) => c.legalCase.startDate.day == day.day)
               .length;
-          bool isToday = index == 0;
+          final isToday = index == 0;
+
           return Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -287,9 +333,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 decoration: BoxDecoration(
                   color: isToday
                       ? _accentBlue
-                      : (count > 0
-                            ? _accentBlue.withOpacity(0.4)
-                            : Colors.white10),
+                      : count > 0
+                      ? _accentBlue.withOpacity(0.4)
+                      : Colors.white10,
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -381,81 +427,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildTypeDistribution(Map<String, int> data) {
     final sorted = data.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: sorted
-          .take(2)
-          .map(
-            (e) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          e.key,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                          ),
-                          maxLines: 1,
-                        ),
-                      ),
-                      Text(
-                        "${e.value}",
-                        style: TextStyle(
-                          color: _accentBlue,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: e.value / 10,
-                      minHeight: 4,
-                      backgroundColor: Colors.white10,
-                      color: _accentBlue,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
 
-  Widget _buildCourtDistribution(List<CaseListItem> cases) {
-    final Map<String, int> courtCounts = {};
-    for (var item in cases) {
-      final court = item.legalCase.court;
-      courtCounts[court] = (courtCounts[court] ?? 0) + 1;
-    }
-    final sorted = courtCounts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: sorted
-          .take(2)
-          .map(
-            (e) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
+      children: sorted.take(2).map((e) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(Icons.gavel_rounded, size: 12, color: _textSub),
-                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       e.key,
                       style: const TextStyle(color: Colors.white, fontSize: 11),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Text(
@@ -468,9 +455,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ],
               ),
-            ),
-          )
-          .toList(),
+              const SizedBox(height: 4),
+              LinearProgressIndicator(
+                value: e.value / 10,
+                minHeight: 4,
+                backgroundColor: Colors.white10,
+                color: _accentBlue,
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildCourtDistribution(List<CaseListItem> cases) {
+    final Map<String, int> counts = {};
+    for (var item in cases) {
+      counts[item.legalCase.court] = (counts[item.legalCase.court] ?? 0) + 1;
+    }
+
+    final sorted = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: sorted.take(2).map((e) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            children: [
+              Icon(Icons.gavel_rounded, size: 12, color: _textSub),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  e.key,
+                  style: const TextStyle(color: Colors.white, fontSize: 11),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Text(
+                "${e.value}",
+                style: TextStyle(
+                  color: _accentBlue,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
