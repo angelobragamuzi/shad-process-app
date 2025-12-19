@@ -51,10 +51,10 @@ It provides structured data entry through forms, intelligent dashboards, calenda
 
 ## Technology Overview
 
-* **Frontend:** Mobile-first application
+* **Frontend:** Mobile-first application developed with Flutter
 * **Architecture:** Modular and scalable
-* **Data Management:** Structured database linked to cases and documents
-* **AI Integration:** Contextual chatbot with database access
+* **Data Management:** Local persistence with Drift Database, structured for cases and documents
+* **AI Integration:** Contextual chatbot powered by Gemini AI Agent with direct database access
 
 ---
 
